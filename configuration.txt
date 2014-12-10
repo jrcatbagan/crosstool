@@ -1,0 +1,142 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+File: configuration.txt
+Created: 08, December 2014
+
+Copyright (C) 2014 Jarielle Catbagan
+
+Licensed under BSD License
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Synopsis: 
+
+	The purpose of this document is to document the logic developed and the approach taken in 
+	obtaining the necessary packages and then configuring, building and then installing those
+	packages to create a cross compiler toolchain.  These steps should be applicable to any
+	arbitrary host and target architecture so long as such platforms support all the packages
+	involved in the build process and that a suitable execution environment exists (i.e. must
+	be running Linux or any suitable unix/unix-like environment).
+
+	One of the main motivations in creating this document is to consolidate all the necessary 
+	information in building a cross toolchain.  That way we don't have to always focus too much 
+	on the small details all the time in setting up the necessary tools for our projects and we 
+	can focus more on the bigger and possibly better things.
+
+	Of course, to prevent any redundancy, all the packages used have their respective documentation
+	elsewhere and should be referred to for those who are interested about learning more.
+
+	The exact versions of the required packages used at the time of this document's creation are 
+	listed in 'Prerequisites', that way any	distinction can be made about the version of the 
+	packages when configuring any future (or possibly older) packages. 
+	
+	The main organization of this document is divided among sections documenting the environment
+	variables used that would make the build process easier to manage and the options used for
+	each part of the build process.
+	
+
+Prerequisites:
+	 1.	gcc-4.9.2
+	 2.	binutils-2.24
+	 3.	glibc-2.20
+	 4.	gmp-6.0.0
+	 5.	mpc-1.0.2
+	 6.	mpfr-3.1.2
+
+
+Process:
+	 1.	Configure and build binutils targeted at the target platform but to run natively.
+	 2.	Configure and build a minimalist cross-gcc (stage-1) enough to build glibc.
+	 3.	Configure and build glibc using the minamalist cross-gcc from the previous step.
+	 4.	Configure and build the final cross-gcc.
+	 5. 	Done! :)
+
+
+I. Environment Variables
+
+	PATH		path must be set to existing path with the addition of $PREFIX/bin
+	PREFIX		top-level directory where all architecture independent/dependet files we
+			be installed
+	TARGET		architecture/platform the cross toolchain is going to target
+
+
+II. Configuring binutils
+
+	--disable-nls
+			some systems don't support Native Language Support so let's disable it, and
+			besides we only want English ;)
+	--disable-werror
+			don't treat warnings as errors; otherwise compilation will fail when 
+			invoking make
+	--prefix
+			top-level directory where all programs and files pertaining to the 
+			cross-toolchain will be installed
+			
+			NOTE: this does not specify where the programs produced will look for 
+			default programs/files (e.g. this does not instruct the linker that this is
+			the top-level directory to search for libraries)
+
+			this option is used to isolate the cross-toolchain from the host-system 
+			toolchain
+	--target
+			target to which the tools should be configured to build for (e.g. configuring
+			the assembler to cross-assemble for the target architecture)
+	--with-sysroot=DIR
+			specifies where the cross-linker will search for libraries, i.e. this 
+			dictates what root directory will be used for searching /usr/lib within that
+			root directory
+			
+	
+III. Configuring Stage-1 gcc
+	
+	--disable-libgomp
+	--disable-libquadmath
+	--disable-libsanitizer	
+	--disable-libssp
+			disables the compilation of the various run-time libaries since we don't 
+			have the target C library yet
+	--disable-multilib
+			only want to work with one variant of the target architecture
+	--disable-shared
+			since this will be a minimalistic stage-1 gcc to assist in the actual build
+			process later on, we tell gcc not to create a shared libgcc along with the
+			cross-compiler
+	--disable-threads
+			since the target C library has not been built yet since we first need a 
+			cross-compiler to compile the library specific to the target, we disable
+			threads for now
+	--enable-languages=LANG1,LANG2,etc
+			--configure gcc to support the specified languages
+
+			'c' is only of only importance now since we are trying to build a cross-compiler 
+			that can compile C code, perhaps maybe C++ as well, we'll see
+	--with-local-prefix=DIR
+			this specifies where the gcc cross-compiler will search for local header files
+
+			since we are building a cross-compiler, it seems illogical for it to search for
+			header files specific to the host system
+	--with-native-system-header-dir=DIR
+			specifies the directory to look for standard system header files rather than
+			/usr/include
+	--with-newlib
+			for some reason this option has different defintiions across numerous sources
+			but seem to be utilized extensively when build cross-compilers
+
+			prevent libgcc from building any code that depends on libc support
+	--without-headers
+			tell gcc that's building the cross-compiler not to use any target headers
+			from the target C library as that library does not exist yet
+
+
+			the directory name wil be appended to the system root specified with the 
+			--with-sysroot option
+	--with-sysroot=DIR
+			specifies the root directory where the cross-compiler will search for libraries
+			and include files
+
+
+IV. Configuring glibc
+V. Configuring Final gcc
+
+
+
+
+
