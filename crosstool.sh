@@ -25,11 +25,15 @@ LOG=$HOME/crosstool-config.log
 
 log()
 {
-	if [ $# -eq 1 ]; then
-		echo -e "`date`: $1" >> $LOG
-	fi
+	echo -e "`date`: $@" >> $LOG
+	return 0
 }
 
+abort()
+{
+	log "error: " $@
+	exit 1
+}
 
 if [ -z $HOST ]; then
 	export HOST=x"x86-unknown-linux-gnu"
@@ -74,7 +78,11 @@ echo -e "cross-toolchain configuration log file\n" > $LOG
 log "installing kernel headers in ${PREFIX}"
 cd $HOME/linux
 make ARCH=arm INSTALL_HDR_PATH=$PREFIX headers_install
-log "kernel headers installed"
+if [ $? -eq 0 ]; then
+	log "kernel headers installed"
+else
+	abort "failed to install kernel headers"
+fi
 
 
 cd $HOME
@@ -95,30 +103,53 @@ cd $HOME/build-binutils
 ../binutils-${BINUTILS_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET \
 	--with-sysroot=$SYSROOT --prefix=$PREFIX --disable-multilib --disable-nls --disable-werror
 make
-log "installing binutils in ${PREFIX}"
+if [ $? -eq 0 ]; then
+	log "binutils built; installing binutils in ${PREFIX}"
+else
+	abort "failed to build binutils"
+fi
 make install
-log "binutils installed" 
+if [ $? -eq 0 ]; then
+	log "binutils installed" 
+else
+	abort "failed to install binutils"
+fi
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # build and install gcc stage-1
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 log "building gcc stage-1 for ${TARGET} with ${PREFIX} as the system root directory"
-cd $HOME/build-gcc
-../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$SYSROOT \
-	--prefix=$PREFIX --with-local-prefix=usr --with-native-system-header-dir=usr/include \
+cd $HOME/build-gcc/build-gcc-pre
+../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$SYSROOT \
+	--prefix=$PREFIX --with-local-prefix=/usr --with-native-system-header-dir=/usr/include \
 	--without-headers --with-newlib --disable-shared --disable-threads --disable-multilib \
 	--disable-libgomp --disable-libquadmath --disable-libsanitizer --disable-libssp \
 	--enable-languages=c
 make all-gcc
-log "installing gcc stage-1 in ${PREFIX}"
+if [ $? -eq 0 ]; then
+	log "gcc stage-1 built; installing in ${PREFIX}"
+else
+	abort "failed to build gcc stage-1"
+fi
 make install-gcc
-log "gcc stage-1 installed"
-log "building libgcc for gcc stage-1"
+if [ $? -eq 0 ]; then
+	log "gcc stage-1 installed; building libgcc for gcc stage-1"
+else
+	abort "failed to install gcc stage-1"
+fi
 make all-target-libgcc
-log "installing libgcc for gcc stage-1 in ${PREFIX}"
+if [ $? -eq 0 ]; then
+	log "libgcc built; installing in ${PREFIX}"
+else
+	abort "failed to build libgcc for gcc stage-1"
+fi
 make install-target-libgcc
-log "libgcc for gcc stage-1 installed"
+if [ $? -eq 0 ]; then
+	log "libgcc for gcc stage-1 installed"
+else
+	abort "failed to install libgcc for gcc stage-1"
+fi
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,24 +161,40 @@ CC="${TARGET}-gcc" AR="${TARGET}-ar" RANLIB="${TARGET}-ranlib" ../glibc-${GLIBC_
 	--build=$HOST --host=$TARGET --prefix=$PREFIX --enable-kernel=2.6.32 \
 	--with-binutils=$PREFIX/bin --with-headers=$PREFIX/include
 make
-log "installing glibc in ${PREFIX}"
+if [ $? -eq 0 ]; then
+	log "glibc built; installing in ${PREFIX}"
+else
+	abort "failed to build glibc"
+fi
 make install
-log "glibc installed"
+if [ $? -eq 0 ]; then
+	log "glibc installed"
+else
+	abort "failed to install glibc"
+fi
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # build and install gcc final
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-log "building gcc final for ${TARGET} with ${PREFIX} as the system root directory"
-cd $HOME/build-gcc
+log "building gcc final and requisites for ${TARGET} with ${PREFIX} as the system root directory"
+cd $HOME/build-gcc/build-gcc-final
 if [ $? -eq 0 ]; then
 	rm -rf *
 fi
-../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$PREFIX \
-	--prefix=$PREFIX --with-local-prefix=usr --with-native-system-header-dir=usr/include \
+../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$PREFIX \
+	--prefix=$PREFIX --with-local-prefix=/usr --with-native-system-header-dir=/usr/include \
 	--disable-static --disable-nls --disable-multilib --enable-threads=posix \
 	--enable-languages=c,c++
 make AS_FOR_TARGET="${TARGET}-as" LD_FOR_TARGET="${TARGET}-ld"
-log "installing gcc final in ${PREFIX}"
+if [ $? -eq 0 ]; then
+	log "gcc final and requisites built; installing in ${PREFIX}"
+else
+	abort "failed to build gcc final and requisites"
+fi
 make install
-log "gcc final installed"
+if [ $? -eq 0 ]; then
+	log "gcc final and requisites installed"
+else
+	abort "failed to install gcc final and requisites"
+fi
