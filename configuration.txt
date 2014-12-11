@@ -53,7 +53,7 @@ Process:
 I. Environment Variables
 
 	PATH		path must be set to existing path with the addition of $PREFIX/bin
-	PREFIX		top-level directory where all architecture independent/dependet files we
+	PREFIX		top-level directory where all architecture independent/dependent files will 
 			be installed
 	TARGET		architecture/platform the cross toolchain is going to target
 
