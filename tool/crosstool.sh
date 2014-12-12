@@ -36,7 +36,7 @@ abort()
 }
 
 if [ -z $HOST ]; then
-	export HOST=x"x86-unknown-linux-gnu"
+	export HOST=x"x86_64-unknown-linux-gnu"
 fi
 
 if [ -z $TARGET ]; then
@@ -182,7 +182,7 @@ cd $HOME/build-gcc/build-gcc-final
 if [ $? -eq 0 ]; then
 	rm -rf *
 fi
-../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$PREFIX \
+../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$SYSROOT \
 	--prefix=$PREFIX --with-local-prefix=/usr --with-native-system-header-dir=/usr/include \
 	--disable-static --disable-nls --disable-multilib --enable-threads=posix \
 	--enable-languages=c,c++
