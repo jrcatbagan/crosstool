@@ -101,7 +101,8 @@ fi
 log "building binutils for ${TARGET}"
 cd $HOME/build-binutils
 ../binutils-${BINUTILS_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET \
-	--with-sysroot=$SYSROOT --prefix=$PREFIX --disable-multilib --disable-nls --disable-werror
+	--with-sysroot=$SYSROOT --prefix=$PREFIX --with-lib-path=${PREFIX}/lib --disable-multilib \
+	--disable-nls --disable-werror
 make
 if [ $? -eq 0 ]; then
 	log "binutils built; installing binutils in ${PREFIX}"
@@ -122,7 +123,7 @@ fi
 log "building gcc stage-1 for ${TARGET} with ${PREFIX} as the system root directory"
 cd $HOME/build-gcc/build-gcc-pre
 ../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$SYSROOT \
-	--prefix=$PREFIX --with-local-prefix=/usr --with-native-system-header-dir=/usr/include \
+	--prefix=$PREFIX --with-local-prefix=$PREFIX --with-native-system-header-dir=/usr/include \
 	--without-headers --with-newlib --disable-shared --disable-threads --disable-multilib \
 	--disable-libgomp --disable-libquadmath --disable-libsanitizer --disable-libssp \
 	--enable-languages=c
@@ -173,6 +174,13 @@ else
 	abort "failed to install glibc"
 fi
 
+sed -i "s#${PREFIX}\/lib\/libc.so.6#libc.so.6#g" ${PREFIX}/lib/libc.so
+sed -i "s#${PREFIX}\/lib\/libc_nonshared.a#libc_nonshared.a#g" ${PREFIX}/lib/libc.so
+sed -i "s#${PREFIX}\/lib\/ld-linux.so.3#ld-linux.so.3#g" ${PREFIX}/lib/libc.so
+
+sed -i "s#${PREFIX}\/lib\/libpthread.so.0#libpthread.so.0#g" ${PREFIX}/lib/libpthread.so
+sed -i "s#${PREFIX}\/lib\/libpthread_nonshared.a#libpthread_nonshared.a#g" ${PREFIX}/lib/libpthread.so
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # build and install gcc final
@@ -182,11 +190,11 @@ cd $HOME/build-gcc/build-gcc-final
 if [ $? -eq 0 ]; then
 	rm -rf *
 fi
-../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$SYSROOT \
-	--prefix=$PREFIX --with-local-prefix=/usr --with-native-system-header-dir=/usr/include \
-	--disable-static --disable-nls --disable-multilib --enable-threads=posix \
-	--enable-languages=c,c++
-make AS_FOR_TARGET="${TARGET}-as" LD_FOR_TARGET="${TARGET}-ld"
+LDFLAGS="-Wl,-rpath,${PREFIX}/lib" ../../gcc-${GCC_VERSION}/configure --build=$HOST --host=$HOST \
+	--target=$TARGET --with-sysroot=$SYSROOT --prefix=$PREFIX --with-local-prefix=$PREFIX \
+	--with-native-system-header-dir=/usr/include --disable-static --disable-nls \
+	--disable-multilib --enable-threads=posix --enable-languages=c,c++
+make
 if [ $? -eq 0 ]; then
 	log "gcc final and requisites built; installing in ${PREFIX}"
 else
