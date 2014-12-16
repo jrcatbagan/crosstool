@@ -1,0 +1,26 @@
+The scripts in this directory with the exception of utility.sh are scripts specifically developed and
+tailored to build and configure a toolchain for a particular target.  The naming convention of the 
+various configuration scripts imply the target platform that the toolchain suite is being configured
+for.
+
+The scripts configures a toolchain specifically targeting the target platform specified with parameters
+listed in the 'Target' section of each relevant script file.
+
+The host platform that the toolchain will run on is determined by the -n/native or -c/--cross options.
+Both options must not be specified at the same time.  The tool chain will be built on the platform that
+this script is invoked on and may not be the same as the host platform where the toolchain will 
+eventually run.
+
+In the context of the configuration scripts, the meaning of the options differ than what they are
+normally referred to.  -n/--native specify that the toolchain will run on the platform that the
+toolchain is built on.  On the other hand -c/--cross specify that the toolchain will run on the platform
+that the toolchain is targeting.  In other words, a native toolchain is being built for the target
+platform.  The option to configure an intermediary platform might be added in the future where a
+toolchain is built on the platform that this script is invoked on to run on a different architecture
+which in turn is targeting a different architecture as well.
+
+The motivation in the approach of this script is to focus on building a toolchain specifically optimized
+for a specific target.  Consequently, this is not a general toolchain configuration.  Furthermore, all
+platforms have different features and the toolchain associated with those individual platforms must be
+configured in a specific way in order to exploit those features.  As the architectures that are involved
+increase over time, a specific configuration will be developed. 
