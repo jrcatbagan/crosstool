@@ -1,6 +1,6 @@
 The scripts in this directory with the exception of utility.sh are scripts specifically developed and
 tailored to build and configure a toolchain for a particular target.  The naming convention of the 
-various configuration scripts imply the target platform that the toolchain suite is being configured
+various configuration scripts indicate the target platform that the toolchain suite is being configured
 for.
 
 The scripts configures a toolchain specifically targeting the target platform specified with parameters
