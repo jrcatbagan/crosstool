@@ -45,6 +45,44 @@
 #	Operating System: linux
 #	Environment: gnueabihf
 
+# include functions from utility.sh
+source ${PWD}/utility.sh >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+	echo -e "error: utility.sh missing"
+	exit 1
+fi
+
+# location relative to the home directory where the toolchain will be installed
+CROSSTOOL_RELPATH=opt/crosstool
+# log file location and name
+LOGFILE=$HOME/crosstool-config.log
+
+# HOST is set later by running the config.guess script in one of the packages downloaded if building
+# a cross-toolchain that will run on the same platform that it is built on.  Otherwise it will be set 
+# to TARGET for a toolchain that will run natively on the target.
+export TARGET="arm-unknown-linux-gnueabihf"
+export SYSROOT=${HOME}/${CROSSTOOL_RELPATH}
+export PREFIX=${SYSROOT}/usr
+# check if the location of the cross-toolchain os already in the path to prevent redefinition
+echo $PATH | grep "${PREFIX}/bin" - 1>/dev/null 2>&1
+if [ $? -ne 0 ]; then
+	export PATH=$PREFIX/bin:$PATH
+fi
+
+# files to download from their respective source links
+GCC_LINK=http://ftp.gnu.org/gnu/gcc/gcc-4.9.2
+GCC_FILE=gcc-4.9.2.tar.bz2
+BINUTILS_LINK=http://ftp.gnu.org/gnu/binutils
+BINUTILS_FILE=binutils-2.24.tar.bz2
+GLIBC_LINK=http://ftp.gnu.org/gnu/glibc
+GLIBC_FILE=glibc-2.20.tar.bz2
+GMP_LINK=http://ftp.gnu.org/gnu/gmp
+GMP_FILE=gmp-6.0.0a.tar.bz2
+MPC_LINK=http://ftp.gnu.org/gnu/mpc
+MPC_FILE=mpc-1.0.2.tar.gz
+MPFR_LINK=http://ftp.gnu.org/gnu/mpfr
+MPFR_FILE=mpfr-3.1.2.tar.bz2
+
 # parse mandatory option (-n/--native or -c/--cross) before continuing
 if [ $# -lt 1 ]; then
 	echo -e "no option specified\n"
@@ -81,45 +119,9 @@ else
 	esac
 fi
 
-CROSSTOOL_RELPATH=opt/crosstool
-LOGFILE=$HOME/crosstool-config.log
-
-# HOST is set later by running the config.guess script in one of the packages downloaded if building
-# a cross-toolchain that will run on the same platform that it is built on.  Otherwise it will be set 
-# to TARGET for a toolchain that will run natively on the target.
-export TARGET="arm-unknown-linux-gnueabihf"
-export SYSROOT=${HOME}/${CROSSTOOL_RELPATH}
-export PREFIX=${SYSROOT}/usr
-# check if the location of the cross-toolchain os already in the path to prevent redefinition
-echo $PATH | grep "${PREFIX}/bin" - 1>/dev/null 2>&1
-if [ $? -ne 0 ]; then
-	export PATH=$PREFIX/bin:$PATH
-fi
-
-GCC_LINK=http://ftp.gnu.org/gnu/gcc/gcc-4.9.2
-GCC_FILE=gcc-4.9.2.tar.bz2
-BINUTILS_LINK=http://ftp.gnu.org/gnu/binutils
-BINUTILS_FILE=binutils-2.24.tar.bz2
-GLIBC_LINK=http://ftp.gnu.org/gnu/glibc
-GLIBC_FILE=glibc-2.20.tar.bz2
-GMP_LINK=http://ftp.gnu.org/gnu/gmp
-GMP_FILE=gmp-6.0.0a.tar.bz2
-MPC_LINK=http://ftp.gnu.org/gnu/mpc
-MPC_FILE=mpc-1.0.2.tar.gz
-MPFR_LINK=http://ftp.gnu.org/gnu/mpfr
-MPFR_FILE=mpfr-3.1.2.tar.bz2
-
-# include functions from utility.sh
-source ${PWD}/utility.sh >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-	echo -e "error: utility.sh missing"
-	exit 1
-fi
-
+# download all necessary packages
 cd $HOME
 echo -e "retrieveing packages into ${HOME}"
-
-# download all necessary packages
 download $GCC_LINK $GCC_FILE
 if [ $? -ne 0 ]; then
 	abort "${GCC_LINK}/${GCC_FILE} - gcc download failed"
@@ -145,6 +147,7 @@ if [ $? -ne 0 ]; then
 	abort "${MPFR_LINK}/${MPFR_FILE} - mpfr download failed"
 fi
 
+# extract all packages previously downloaded
 extract GCC_FILE
 echo $GCC_FILE
 extract BINUTILS_FILE
@@ -158,7 +161,17 @@ echo $MPC_FILE
 extract MPFR_FILE
 echo $MPFR_FILE
 
-export HOST=`${HOME}/${GCC_FILE}/config.guess`
+# set the type of the build to perform based on the option provided to this script
+case $BUILD_TYPE in
+native)
+	export HOST=`${HOME}/${GCC_FILE}/config.guess`
+	log "HOST has been determined to be: ${HOST}"
+	;;
+cross)
+	export HOST=`${HOME}/${GCC_FILE}/config.guess`
+	log "'cross' not supported yet, HOST defaulting to ${HOST}" 
+	;;
+esac
 
 # verify if the specified location for installing the final binaries exist
 # if not make the appropriate directories, otherwise remove everything so we can start anew
@@ -171,10 +184,11 @@ else
 	mkdir usr
 fi
 
-# install kernel headers
+# initialize the log file
 rm -f $LOGFILE
 echo -e "cross-toolchain configuration log file\n" > $LOGFILE
 
+# install kernel headers
 log "installing kernel headers in ${PREFIX}"
 cd $HOME/linux
 make ARCH=arm INSTALL_HDR_PATH=$PREFIX headers_install
@@ -201,8 +215,6 @@ ln -s ${HOME}/${GMP_FILE} gmp
 ln -s ${HOME}/${MPC_FILE} mpc
 ln -s ${HOME}/${MPFR_FILE} mpfr
 
-
-
 # build and install binutils
 log "building binutils for ${TARGET}"
 cd ${HOME}/${BINUTILS_FILE}-build
@@ -222,8 +234,7 @@ else
 	abort "failed to install binutils"
 fi
 
-
-# build and install gcc stage-1
+# build and install gcc stage-1 to be used later to build glibc
 log "building gcc stage-1 for ${TARGET} with ${PREFIX} as the system root directory"
 cd ${HOME}/${GCC_FILE}-build/${GCC_FILE}-pre-build
 ../../${GCC_FILE}/configure --build=$HOST --host=$HOST --target=$TARGET --with-sysroot=$SYSROOT \
@@ -256,7 +267,6 @@ else
 	abort "failed to install libgcc for gcc stage-1"
 fi
 
-
 # build and install glibc
 log "building glibc for ${TARGET}"
 cd ${HOME}/${GLIBC_FILE}-build
@@ -276,13 +286,16 @@ else
 	abort "failed to install glibc"
 fi
 
-sed -i "s#${PREFIX}\/lib\/libc.so.6#libc.so.6#g" ${PREFIX}/lib/libc.so
-sed -i "s#${PREFIX}\/lib\/libc_nonshared.a#libc_nonshared.a#g" ${PREFIX}/lib/libc.so
-sed -i "s#${PREFIX}\/lib\/ld-linux.so.3#ld-linux.so.3#g" ${PREFIX}/lib/libc.so
-
-sed -i "s#${PREFIX}\/lib\/libpthread.so.0#libpthread.so.0#g" ${PREFIX}/lib/libpthread.so
-sed -i "s#${PREFIX}\/lib\/libpthread_nonshared.a#libpthread_nonshared.a#g" ${PREFIX}/lib/libpthread.so
-
+# 'ld' is looking at the wrong place for the essential libraries when building gcc final
+# the respective 'ld' scripts are causing the linker to look for the libraries with the
+# library path expanded starting from the root and then appended to the SYSROOT of the toolchain being
+# built
+# to correct this we simply remove the full path and leave the base name of the library
+sed -i "s#${PREFIX}/lib/libc.so.6#libc.so.6#g" ${PREFIX}/lib/libc.so
+sed -i "s#${PREFIX}/lib/libc_nonshared.a#libc_nonshared.a#g" ${PREFIX}/lib/libc.so
+sed -i "s#${PREFIX}/lib/ld-linux.so.3#ld-linux.so.3#g" ${PREFIX}/lib/libc.so
+sed -i "s#${PREFIX}/lib/libpthread.so.0#libpthread.so.0#g" ${PREFIX}/lib/libpthread.so
+sed -i "s#${PREFIX}/lib/libpthread_nonshared.a#libpthread_nonshared.a#g" ${PREFIX}/lib/libpthread.so
 
 # build and install gcc final
 log "building gcc final and requisites for ${TARGET} with ${PREFIX} as the system root directory"
