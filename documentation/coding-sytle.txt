@@ -1,0 +1,65 @@
+File: coding-style.txt
+Created: 17, December 2014
+
+Copyright (C) 2014 Jarielle Catbagan
+
+
+I. Introduction
+
+The purpose of this document is to delineate the preferred coding style for this project.  The main 
+impetus is not only to allow ease of analysis and maintenance of the project but to encourage 
+developement.  This document aims to establish a systematic and efficient coding style.
+
+II. Indentation
+
+Tab widths must be 8 and must be converted to spaces.  The reason behind a tab width of 8 is to 
+allow browsing through the code to be more easier especially when viewing the code for long durations.
+Tabs must be converted to spaces to be portable as tab characters can be interpreted differently
+across different platforms.
+
+All code within a block, whether it is a function block, data block or a conditional block, must be
+one indentation more than the block that it is isolated in.
+
+C example:
+
+	int main()
+	{
+		printf("this demonstrates how indentation should be");
+		return 0;
+	}
+
+Python Example:
+	
+	def func():
+		for i in range(0, 6):
+			print("indentation example)
+		return 0
+
+III. Naming
+
+When it comes to functions, data structures, and the like, choosing a name is an important consideration
+to take into account.  The name must be descriptive and must easily convey that the intended
+purpose.  So for example if a variable is delegated the task of keeping count, it would make sense to
+have the name as 'count', or 'counter' or anything along the lines.  As much as possible one must 
+refrain themselves from using obscure names except in situations where its intended purpose is limited
+to a small scope and is easily understood.
+
+For example:
+
+	for(int i = 0; i < threshold; ++i) {
+		/* do something */
+	}
+
+Here the variable 'i' has its scope limited in the 'for' loop and its purpose is easily understood to
+act as a counter.  These types of situations are perfectly acceptable.
+
+IV. Comments
+
+Comments can aid in understanding specific parts of a program and can benefit not only the programmer 
+themselves but any future readers of the code.  With that in mind, generously comment the code.  Of
+course too much can also hinder adverse effects.
+
+When commenting, the preferred method is to place the comment on a line by itself and especially 
+describing anything after it.
+
+
